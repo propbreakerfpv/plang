@@ -4,6 +4,7 @@ pub enum Token {
     Elegal,
     Eof,
     WhiteSpace(String),
+    NewLine,
 
     LPeren,
     RPeren,
@@ -64,9 +65,21 @@ impl Token {
             _ => false,
         }
     }
+    pub fn is_not_eof(&self) -> bool {
+        match self {
+            Token::Eof => false,
+            _ => true,
+        }
+    }
     pub fn is_whitespace(&self) -> bool {
         match self {
             Token::WhiteSpace(_) => true,
+            _ => false,
+        }
+    }
+    pub fn is_ident(&self) -> bool {
+        match self {
+            Token::Ident(_) => true,
             _ => false,
         }
     }

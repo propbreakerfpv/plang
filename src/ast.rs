@@ -53,10 +53,22 @@ pub struct Arg {
 // todo
 #[derive(Debug)]
 pub struct Type {
+    pub name: String,
 }
 
 #[derive(Debug)]
 pub enum Value {
+    F32(f32),
+    I32(i32),
+    Type(Type),
+    Var(String),
+    FnCall(FnCall),
+}
+
+#[derive(Debug)]
+pub struct FnCall {
+    pub name: String,
+    pub args: Vec<Expression>,
 }
 
 #[derive(Debug)]
@@ -84,3 +96,5 @@ pub struct ElseIf {
 #[derive(Debug)]
 pub struct Block {
 }
+
+

@@ -103,6 +103,7 @@ impl<'a> Lexer<'a> {
                 self.advance();
                 Token::String(str)
             }
+            '\n' => Token::NewLine,
             char => match char {
                 c if c.is_ascii_digit() => {
                     Token::Number(self.lex_number())

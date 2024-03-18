@@ -8,7 +8,9 @@ mod parser;
 mod ast;
 
 fn main() {
-    let input = "fn main(arg:  , another:) {
+    let input = "fn println(msg: String) {}
+        fn main(arg: String, another: String) {
+println(\"hello world\");
 }";
     // let input = fs::read_to_string("./test.pl").unwrap();
     println!("{}", input);
@@ -16,6 +18,6 @@ fn main() {
     println!("{:?}", tokens);
     let ast = parse(tokens).inspect_err(|e| println!("{}", e));
     if ast.is_ok() {
-        println!("{:?}", ast);
+        println!("\nast:\n{:?}", ast);
     }
 }
