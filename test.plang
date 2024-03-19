@@ -1,6 +1,17 @@
-fn main(argv: List<String>) {
-    println("hello world");
-    while true {
-        println("testing");
+fn println(msg: String) {
+}
+
+fn display_value(value: i32) {
+    if value > 0 {
+        println(\"negitive\");
+    } else if value < 0 {
+        println(\"negitive\");
+    } else {
+        println(\"zero\");
     }
+}
+
+fn main(arg: String, another: String) {
+    println(\"hello world\");
+    display_value(35);
 }
