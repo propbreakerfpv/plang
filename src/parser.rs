@@ -13,8 +13,8 @@ pub fn parse(tokens: Vec<Token>) -> Result<Vec<Ast>, ParserError> {
         cur_tok,
         peek_tok,
         idx: 1,
-        vars: HashSet::new(),
         funcs: HashSet::new(),
+        scopes: vec![HashSet::new()],
         line: 1,
     };
     return parser.parse()
@@ -38,8 +38,8 @@ struct Parser {
     cur_tok: Token,
     peek_tok: Token,
     idx: usize,
-    vars: HashSet<String>,
     funcs: HashSet<String>,
+    scopes: Vec<HashSet<String>>,
     line: u32,
 }
 
@@ -54,36 +54,102 @@ impl Parser {
     fn parse_block(&mut self) -> Result<Vec<Ast>, ParserError> {
 
         if self.cur_tok != Token::LBrace {
+            println!("{:?}", self.cur_tok);
             return self.make_err("expected a block")
         }
         self.advance();
+
+        self.scopes.push(HashSet::new());
+         
         let mut block = Vec::new();
         while self.cur_tok != Token::RBrace && ! self.cur_tok.is_eof() {
             block.push(self.parse_section()?);
         }
         self.advance();
+
+        self.scopes.pop();
+
         return Ok(block);
     }
     fn parse_section(&mut self) -> Result<Ast, ParserError> {
         match &self.cur_tok {
             Token::Fn => Ok(Ast::Statement(self.parse_fn_def()?)),
             Token::Ident(_) => Ok(Ast::Expression(self.parse_expr()?)),
-            t => unreachable!("{:?}", t),
+            Token::If => Ok(Ast::Expression(self.parse_if()?)),
+            t => unreachable!("{:?} line: {}", t, self.line),
         }
+    }
+    fn parse_if(&mut self) -> Result<Expression, ParserError> {
+        if self.cur_tok != Token::If {
+            return self.make_err("expected if");
+        }
+        self.advance();
+        let condition = self.parse_expr()?;
+
+        let block = self.parse_block()?;
+
+        let elsifs = self.parse_els_ifs()?;
+
+        let els = if self.cur_tok == Token::Else {
+            self.advance();
+            Some(self.parse_block()?)
+        } else {
+            None
+        };
+
+        Ok(Expression::If(If {
+            condition: Box::new(condition),
+            block,
+            elsifs,
+            els,
+        }))
+    }
+    fn parse_els_ifs(&mut self) -> Result<Option<Vec<ElseIf>>, ParserError> {
+        if self.cur_tok != Token::Else || self.peek_tok != Token::If {
+            return Ok(None);
+        }
+        self.advance();
+        let mut elsifs = Vec::new();
+        while self.cur_tok == Token::Else && self.cur_tok == Token::If && self.cur_tok.is_not_eof() {
+            self.advance();
+            let condition = self.parse_expr()?;
+            let block = self.parse_block()?;
+            elsifs.push(ElseIf {
+                condition: Box::new(condition),
+                block,
+            });
+        }
+        Ok(Some(elsifs))
     }
     fn parse_expr(&mut self) -> Result<Expression, ParserError> {
         let lhs = self.parse_value()?;
         self.advance();
-        return Ok(lhs);
+        if ! self.cur_tok.is_operator() {
+            return Ok(lhs);
+        }
+        let op = self.cur_tok.clone();
+        self.advance();
+
+        let rhs = self.parse_value()?;
+
+        self.advance();
+
+        let op = match Bop::from_token(op) {
+            Some(v) => v,
+            None => return self.make_err("expected binary operator"),
+        };
+
+        Ok(Expression::BinaryOperation(Box::new(lhs), op, Box::new(rhs)))
     }
     fn parse_value(&mut self) -> Result<Expression, ParserError> {
         match &self.cur_tok {
             Token::Ident(i) => {
-                if self.vars.get(i).is_some() {
+                if self.get_var(i) {
                     Ok(Expression::Value(Value::Var(i.clone())))
                 } else if self.funcs.get(i).is_some() && self.peek_tok == Token::LPeren {
                     Ok(Expression::Value(Value::FnCall(self.parse_fn_call()?)))
                 } else {
+                    println!("{:?}", self.funcs);
                     self.make_err(format!("unknown identifyer {:?}", i))
                 }
             }
@@ -126,6 +192,8 @@ impl Parser {
     }
     fn parse_fn_def(&mut self) -> Result<Statement, ParserError> {
         assert!(self.cur_tok == Token::Fn);
+
+
         let name = match self.advance() {
             Token::Ident(n) => n,
             _ => unreachable!(),
@@ -143,6 +211,7 @@ impl Parser {
         let body = self.parse_block()?;
 
         self.funcs.insert(name.clone());
+
         
         return Ok(Statement::Function(Function {
             name,
@@ -184,6 +253,7 @@ impl Parser {
             }
             self.advance();
         }
+        self.scopes.last_mut().unwrap().insert(name.clone());
 
         return Ok(Arg {
             name,
@@ -214,6 +284,9 @@ impl Parser {
         }
         self.peek_tok = self.tokens.get(self.idx).unwrap().clone();
         self.cur_tok.clone()
+    }
+    fn get_var(&self, name: &String) -> bool {
+        self.scopes.iter().rev().find(|x| x.get(name).is_some() ).is_some()
     }
     fn make_err<T: ToString, U>(&self, msg: T) -> Result<U, ParserError> {
         Err(ParserError {

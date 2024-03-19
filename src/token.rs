@@ -42,6 +42,7 @@ pub enum Token {
     For,
     While,
     If,
+    Else,
     Struct,
     Enum,
     Return,
@@ -80,6 +81,14 @@ impl Token {
     pub fn is_ident(&self) -> bool {
         match self {
             Token::Ident(_) => true,
+            _ => false,
+        }
+    }
+    pub fn is_operator(&self) -> bool {
+        match self {
+            Token::Plus | Token::Minus | Token::Slash | Token::Star |
+            Token::Gt | Token::Lt | Token::GtEq | Token::LtEq |
+            Token::Carret | Token::Not => true,
             _ => false,
         }
     }

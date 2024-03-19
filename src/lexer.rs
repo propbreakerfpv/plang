@@ -24,6 +24,7 @@ fn get_keyword(word: String) -> Token {
         "for" => Token::For,
         "while" => Token::While,
         "if" => Token::If,
+        "else" => Token::Else,
         "struct" => Token::Struct,
         "enum" => Token::Enum,
         "return" => Token::Return,
@@ -109,7 +110,7 @@ impl<'a> Lexer<'a> {
                     Token::Number(self.lex_number())
                 }
                 c if c.is_ascii_alphabetic() => {
-                    let word = self.advance_while(|c| c.is_ascii_alphabetic() || c == '_');
+                    let word = self.advance_while(|c| c.is_ascii_alphanumeric() || c == '_');
                     get_keyword(word)
                 }
                 c if c.is_whitespace() => {
