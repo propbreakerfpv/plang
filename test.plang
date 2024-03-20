@@ -3,15 +3,15 @@ fn println(msg: String) {
 
 fn display_value(value: i32) {
     if value > 0 {
-        println(\"negitive\");
+        println("negitive");
     } else if value < 0 {
-        println(\"negitive\");
+        println("negitive");
     } else {
-        println(\"zero\");
+        println("zero");
     }
 }
 
 fn main(arg: String, another: String) {
-    println(\"hello world\");
+    println("hello world");
     display_value(35);
 }

@@ -14,7 +14,7 @@ fn main() {
     println!("{:?}", tokens);
     let ast = parse(tokens).inspect_err(|e| println!("{}", e));
     if ast.is_ok() {
-        println!("\nast:\n{:?}", ast);
+        println!("\nast:\n{:?}\n", ast);
         for section in ast.unwrap() {
             println!("{}", section);
         }

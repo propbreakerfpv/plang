@@ -144,8 +144,9 @@ impl Display for If {
             write!(f, "{}\n", ast)?;
         }
         for elsif in self.elsifs.clone().unwrap_or(Vec::new()) {
-            write!(f, "{}\n", elsif)?;
+            write!(f, "{}", elsif)?;
         }
+        write!(f, "else\n")?;
         match &self.els {
             Some(b) => {
                 for ast in b {

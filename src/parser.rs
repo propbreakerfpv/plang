@@ -65,7 +65,11 @@ impl Parser {
         while self.cur_tok != Token::RBrace && ! self.cur_tok.is_eof() {
             block.push(self.parse_section()?);
         }
-        self.advance();
+        if self.cur_tok == Token::RBrace {
+            self.advance();
+        } else {
+            return self.make_err("expected right brace")
+        }
 
         self.scopes.pop();
 
@@ -85,10 +89,12 @@ impl Parser {
         }
         self.advance();
         let condition = self.parse_expr()?;
+        println!("after cond {:?}", self.cur_tok);
 
         let block = self.parse_block()?;
 
         let elsifs = self.parse_els_ifs()?;
+        println!("elsifs: {:?}", elsifs);
 
         let els = if self.cur_tok == Token::Else {
             self.advance();
@@ -105,12 +111,13 @@ impl Parser {
         }))
     }
     fn parse_els_ifs(&mut self) -> Result<Option<Vec<ElseIf>>, ParserError> {
+        println!("elsif cur_tok: {:?}, peek: {:?}", self.cur_tok, self.peek_tok);
         if self.cur_tok != Token::Else || self.peek_tok != Token::If {
             return Ok(None);
         }
-        self.advance();
         let mut elsifs = Vec::new();
-        while self.cur_tok == Token::Else && self.cur_tok == Token::If && self.cur_tok.is_not_eof() {
+        while self.cur_tok == Token::Else && self.peek_tok == Token::If && self.cur_tok.is_not_eof() {
+            self.advance();
             self.advance();
             let condition = self.parse_expr()?;
             let block = self.parse_block()?;
@@ -160,7 +167,7 @@ impl Parser {
             Token::String(s) => {
                 Ok(Expression::Value(Value::Type(Type { name: "String".to_string() })))
             }
-            t => unreachable!("{:?}", t)
+            t => unreachable!("{:?} on line: {}", t, self.line)
         }
     }
     fn parse_fn_call(&mut self) -> Result<FnCall, ParserError> {
