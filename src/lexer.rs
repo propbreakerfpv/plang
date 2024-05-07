@@ -32,6 +32,7 @@ fn get_keyword(word: String) -> Token {
         "continue" => Token::Continue,
         "true" => Token::True,
         "false" => Token::False,
+        "import" => Token::Import,
         _ => Token::Ident(word),
     }
 }

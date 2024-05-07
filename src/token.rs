@@ -48,6 +48,7 @@ pub enum Token {
     Return,
     Break,
     Continue,
+    Import,
 
     True,
     False

@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{collections::HashMap, fmt::Display};
 
 use crate::token::Token;
 
@@ -22,6 +22,12 @@ pub enum Statement {
     Struct(Struct),
     Enum(Enum),
     Let(Let),
+    Import(Import),
+}
+
+#[derive(Debug, Clone)]
+pub struct Import {
+    pub path: String,
 }
 #[derive(Debug, Clone)]
 pub struct Let {
@@ -61,10 +67,22 @@ pub struct Type {
 }
 
 #[derive(Debug, Clone)]
+pub struct TypeConstr {
+    pub name: String,
+    pub values: HashMap<String, Constant>
+}
+
+#[derive(Debug, Clone)]
+pub enum Constant {
+    Value(Value),
+    Arr(Vec<Constant>)
+}
+
+#[derive(Debug, Clone)]
 pub enum Value {
     F32(f32),
     I32(i32),
-    Type(Type),
+    TypeConstr(TypeConstr),
     Var(String),
     FnCall(FnCall),
 }
@@ -182,13 +200,24 @@ impl Display for Function {
         Ok(())
     }
 }
+impl Display for Struct {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "struct {} {{", self.name)?;
+        for arg in &self.fields {
+            write!(f, "{:?}\n", arg)?;
+        }
+        write!(f, "}}\n")?;
+        Ok(())
+    }
+}
 impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Statement::Function(func) => write!(f, "{}", func),
-            Statement::Struct(_) => todo!(),
+            Statement::Struct(sct) => write!(f, "{}", sct),
             Statement::Enum(_) => todo!(),
             Statement::Let(_) => todo!(),
+            Statement::Import(i) => write!(f, "{}", i.path),
         }
     }
 }

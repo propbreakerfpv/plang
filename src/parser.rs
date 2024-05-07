@@ -1,9 +1,11 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fmt::Display;
+use std::fs;
 
 use crate::token::{Number, Token};
 use crate::ast::*;
+use crate::wat::get_exports;
 
 pub fn parse(tokens: Vec<Token>) -> Result<Vec<Ast>, ParserError> {
     let cur_tok = tokens.first().unwrap().clone();
@@ -15,10 +17,15 @@ pub fn parse(tokens: Vec<Token>) -> Result<Vec<Ast>, ParserError> {
         idx: 1,
         funcs: HashSet::new(),
         scopes: vec![HashSet::new()],
+        types: HashSet::new(),
         line: 1,
     };
+
+    parser.types.insert(String::from("i32"));
+
     return parser.parse()
 }
+
 
 #[derive(Debug)]
 pub struct ParserError {
@@ -40,6 +47,7 @@ struct Parser {
     idx: usize,
     funcs: HashSet<String>,
     scopes: Vec<HashSet<String>>,
+    types: HashSet<String>,
     line: u32,
 }
 
@@ -80,8 +88,67 @@ impl Parser {
             Token::Fn => Ok(Ast::Statement(self.parse_fn_def()?)),
             Token::Ident(_) => Ok(Ast::Expression(self.parse_expr()?)),
             Token::If => Ok(Ast::Expression(self.parse_if()?)),
+            Token::Struct => Ok(Ast::Statement(self.parse_struct_def()?)),
+            Token::Import => Ok(Ast::Statement(self.parse_import()?)),
             t => unreachable!("{:?} line: {}", t, self.line),
         }
+    }
+    fn parse_import(&mut self) -> Result<Statement, ParserError> {
+        if self.cur_tok != Token::Import {
+            return self.make_err("expected import");
+        }
+        self.advance();
+        let path = if let Token::String(s) = &self.cur_tok {
+            s.clone()
+        } else {
+            return self.make_err("expected path");
+        };
+        self.advance();
+
+        // import all exported symboles
+        let import = fs::read_to_string(&path)
+            .map_err(|e| ParserError {
+                msg: e.to_string(),
+                line: self.line,
+            });
+        for (name, tp) in get_exports(import?) {
+            match tp.as_str() {
+                "func" => self.funcs.insert(name),
+                _ => return self.make_err("unexpected type when parsing wat file")
+            };
+        }
+
+        if self.cur_tok != Token::SemiColin {
+            return self.make_err("missing semicolin");
+        }
+        self.advance();
+
+        Ok(Statement::Import(Import {
+            path,
+        }))
+    }
+    fn parse_struct_def(&mut self) -> Result<Statement, ParserError> {
+        if self.cur_tok != Token::Struct {
+            return self.make_err("expected struct");
+        }
+        self.advance();
+        let name = match &self.cur_tok {
+            Token::Ident(i) => i.clone(),
+            _ => return self.make_err("expected name")
+        };
+        self.advance();
+        // todo: make this actualy do something
+        while self.cur_tok != Token::RBrace {
+            self.advance();
+        }
+        self.advance();
+
+        self.types.insert(name.to_string());
+
+        Ok(Statement::Struct(Struct {
+            name: name.to_string(),
+            fields: Vec::new(),
+        }))
     }
     fn parse_if(&mut self) -> Result<Expression, ParserError> {
         if self.cur_tok != Token::If {
@@ -165,7 +232,13 @@ impl Parser {
                 Number::I32(i) => Expression::Value(Value::I32(*i)),
             }),
             Token::String(s) => {
-                Ok(Expression::Value(Value::Type(Type { name: "String".to_string() })))
+                let mut values = HashMap::new();
+                let chars = s.chars().map(|x| Constant::Value(Value::I32(x as i32))).collect::<Vec<_>>();
+                values.insert(String::from("String"), Constant::Arr(chars));
+                Ok(Expression::Value(Value::TypeConstr(TypeConstr {
+                    name: "String".to_string(),
+                    values,
+                })))
             }
             t => unreachable!("{:?} on line: {}", t, self.line)
         }
@@ -271,7 +344,11 @@ impl Parser {
         self.advance();
         let tp = match &self.cur_tok {
             Token::Ident(i) => {
-                Type { name: i.clone() }
+                if self.types.get(i).is_some() {
+                    Type { name: i.clone() }
+                } else {
+                    return  self.make_err("type not defined");
+                }
             }
             _ => return self.make_err("expected type")
         };
@@ -300,5 +377,6 @@ impl Parser {
             msg: msg.to_string(),
             line: self.line,
         })
+  
     }
 }

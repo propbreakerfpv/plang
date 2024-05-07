@@ -1,17 +1,10 @@
-fn println(msg: String) {
+import "std.wat";
+
+struct String {
+    ptr: i32,
+    len: i32,
 }
 
-fn display_value(value: i32) {
-    if value > 0 {
-        println("negitive");
-    } else if value < 0 {
-        println("negitive");
-    } else {
-        println("zero");
-    }
-}
-
-fn main(arg: String, another: String) {
+fn main() {
     println("hello world");
-    display_value(35);
 }
