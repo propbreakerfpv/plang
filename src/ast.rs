@@ -78,6 +78,18 @@ pub enum Constant {
     Arr(Vec<Constant>)
 }
 
+impl Constant {
+    pub fn get_number(&self) -> Option<i32> {
+        match self {
+            Constant::Value(v) => match v {
+                Value::I32(i) => Some(*i),
+                _ => None
+            },
+            Constant::Arr(_) => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Value {
     F32(f32),

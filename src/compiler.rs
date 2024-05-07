@@ -1,6 +1,6 @@
 use std::{collections::HashMap, error::Error, fmt::Display, fs};
 
-use crate::ast::{Ast, Expression, Function, Import, TypeConstr, Value};
+use crate::ast::{Ast, Constant, Expression, Function, Import, TypeConstr, Value};
 
 pub fn compile(ast: Vec<Ast>) -> Result<String, CompilerError> {
     let mut compiler = Compiler::new(ast);
@@ -17,8 +17,9 @@ fn fill_in(input: String) -> Result<String, CompilerError> {
         .enumerate()
         .map(|(i, x)| {
             if i % 2 == 1 {
-                match addrs.get(&x) {
-                    Some(v) => v.to_string(),
+                let (name, offset) = x.split_once("+").unwrap_or((&x, "0"));
+                match addrs.get(name) {
+                    Some(v) => (v + offset.parse::<i32>().unwrap()).to_string(),
                     None => {
                         addrs.insert(x, addr);
                         addr += 4;
@@ -30,9 +31,6 @@ fn fill_in(input: String) -> Result<String, CompilerError> {
             }
         })
         .collect::<Vec<_>>();
-    for i in a.clone() {
-        println!("name: {:?}", i);
-    }
     return Ok(a.join(""));
 }
 
@@ -94,9 +92,10 @@ impl Compiler {
         };
         let content = content.trim();
         let content = content.trim_start_matches("(module");
-        let content = content.trim_end_matches(')').trim();
+        let mut content = content.trim_end_matches(')').trim().to_string();
+        content.push_str("\n");
 
-        Ok(content.to_string())
+        Ok(content)
     }
     fn compile_fn_def(&mut self, func: Function) -> Result<String, CompilerError> {
         let mut out = String::from("(func $");
@@ -113,8 +112,8 @@ impl Compiler {
         }
         if &func.ret_tp.name != "()" {
             out.push_str(" (result i32)");
-            out.push_str("\n");
         }
+        out.push_str("\n");
 
         let body = self.compile_block(func.body)?;
         out.push_str(&body);
@@ -175,8 +174,18 @@ impl Compiler {
         // todo: make this something that can be done to arbatrary types vea a trait
         if tp.name == "String" {
             let mut out = String::new();
-            out.push_str("(i32.store (i32.const ~type-String~) (i32.const 100))");
-            out.push_str(&format!("(i32.store (i32.const ~type-String+4~) (i32.const {}))", tp.values.len()));
+            for v in &tp.values {
+                match v.1 {
+                    Constant::Value(_) => todo!(),
+                    Constant::Arr(arr) => {
+                        out.push_str(&format!("(i32.store (i32.const ~type-String~) (i32.const {}))\n", arr.len()));
+                        for (idx, char) in arr.iter().enumerate() {
+                            out.push_str(&format!("(i32.store (i32.const ~type-String+{}~) (i32.const {}))\n", idx + 4, char.get_number().unwrap()));
+                        }
+                        println!("v: {:?}", arr);
+                    },
+                }
+            }
             return Ok(out);
         }
         todo!()
