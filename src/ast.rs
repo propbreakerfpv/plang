@@ -111,6 +111,7 @@ pub enum Bop {
     Minus,
     Slash,
     Star,
+    Eq,
     Gt,
     Lt,
     GtEq,

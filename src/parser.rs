@@ -90,8 +90,12 @@ impl Parser {
             Token::If => Ok(Ast::Expression(self.parse_if()?)),
             Token::Struct => Ok(Ast::Statement(self.parse_struct_def()?)),
             Token::Import => Ok(Ast::Statement(self.parse_import()?)),
+            // Token::Let => Ok(Ast::Statement(self.parse_let()?)),
             t => unreachable!("{:?} line: {}", t, self.line),
         }
+    }
+    fn parse_let(&mut self) -> Result<Statement, ParserError> {
+        todo!()
     }
     fn parse_import(&mut self) -> Result<Statement, ParserError> {
         if self.cur_tok != Token::Import {

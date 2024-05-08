@@ -10,5 +10,9 @@ fn test() {
 }
 
 fn main() {
-    test();
+    if 5 > 2 {
+        test();
+    } else {
+        println("true");
+    }
 }

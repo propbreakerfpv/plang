@@ -48,5 +48,27 @@
 
 (call $println (i32.const 0)))
 (func $main (export "_start")
-(call $test ))
+(i32.const 5)
+(i32.const 2)
+(i32.gt_u)
+(if
+
+(then
+
+(call $test )
+)
+
+(else
+
+(i32.store (i32.const 0) (i32.const 4))
+(i32.store (i32.const 4) (i32.const 116))
+(i32.store (i32.const 5) (i32.const 114))
+(i32.store (i32.const 6) (i32.const 117))
+(i32.store (i32.const 7) (i32.const 101))
+
+(call $println (i32.const 0))
+)
+
+)
+)
 )

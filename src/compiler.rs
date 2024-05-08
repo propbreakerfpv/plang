@@ -1,6 +1,6 @@
-use std::{collections::HashMap, error::Error, fmt::Display, fs};
+use std::{collections::HashMap, error::Error, fmt::Display, fs, ops::Deref};
 
-use crate::ast::{Ast, Constant, Expression, Function, Import, TypeConstr, Value};
+use crate::ast::{Ast, Bop, Constant, ElseIf, Expression, Function, If, Import, TypeConstr, Value};
 
 pub fn compile(ast: Vec<Ast>) -> Result<String, CompilerError> {
     let mut compiler = Compiler::new(ast);
@@ -135,16 +135,53 @@ impl Compiler {
     fn compile_expr(&mut self, expr: Expression) -> Result<Vec<String>, CompilerError> {
         match expr {
             Expression::Value(v) => self.compile_val(v),
-            Expression::BinaryOperation(_, _, _) => todo!(),
+            Expression::BinaryOperation(lhs, op, rhs) => self.compile_binary_op(*lhs, op, *rhs),
             Expression::UnaryOperation(_, _) => todo!(),
-            Expression::If(_) => todo!(),
+            Expression::If(i) => self.compile_if(i),
         }
+    }
+    fn compile_binary_op(&mut self, lhs: Expression, op: Bop, rhs: Expression) -> Result<Vec<String>, CompilerError> {
+        let mut out = Vec::new();
+        out.append(&mut self.compile_expr(lhs)?);
+        out.append(&mut self.compile_expr(rhs)?);
+        out.push(match op {
+            Bop::Plus => todo!(),
+            Bop::Minus => todo!(),
+            Bop::Slash => todo!(),
+            Bop::Star => todo!(),
+            Bop::Eq => String::from("(i32.eq)"),
+            Bop::Gt => String::from("(i32.gt_u)"),
+            Bop::Lt => todo!(),
+            Bop::GtEq => todo!(),
+            Bop::LtEq => todo!(),
+            Bop::Carret => todo!(),
+        });
+        Ok(out)
+    }
+    fn compile_if(&mut self, i: If) -> Result<Vec<String>, CompilerError> {
+        let mut out = Vec::new();
+        out.append(&mut self.compile_expr(*i.condition)?);
+        out.push(String::from("(if\n"));
+        out.push(String::from("(then\n"));
+        out.push(self.compile_block(i.block)?);
+        out.push(String::from(")\n"));
+        if i.els.is_some() {
+            out.push(String::from("(else\n"));
+            out.push(self.compile_block(i.els.unwrap())?);
+            out.push(String::from(")\n"));
+        }
+        out.push(String::from(")\n"));
+
+        Ok(out)
     }
     fn compile_val(&mut self, value: Value) -> Result<Vec<String>, CompilerError> {
         let mut ret = Vec::new();
         match value {
             Value::F32(_) => todo!(),
-            Value::I32(_) => todo!(),
+            Value::I32(i32) => {
+                ret.push(format!("(i32.const {})", i32));
+                Ok(ret)
+            }
             Value::TypeConstr(tp) => {
                 ret.push(self.compile_type_construction(tp.clone())?);
                 ret.push(format!("(i32.const ~type-{}~)", tp.name));
